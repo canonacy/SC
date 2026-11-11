@@ -112,6 +112,13 @@ object AppConfig {
     const val TAG_PROXY = "proxy"
     const val TAG_DIRECT = "direct"
     const val TAG_BLOCKED = "block"
+    const val TAG_STEAMDL = "steamdl"
+
+    // SteamDL cache mode
+    const val PREF_STEAMDL_ENABLED = "pref_steamdl_enabled"
+    const val PREF_STEAMDL_TOKEN = "pref_steamdl_token"
+    const val PORT_STEAMDL_BRIDGE = 10813
+    const val STEAMDL_CONFIG_URL = "https://files.steamdl.ir/client_config.json"
     const val TAG_FRAGMENT = "fragment"
     const val TAG_DNS = "dns-module"
     const val TAG_DOMESTIC_DNS = "domestic-dns"

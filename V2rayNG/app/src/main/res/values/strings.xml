@@ -576,4 +576,12 @@
     <string name="sub_info_traffic" translatable="false">%1$s / %2$s</string>
     <string name="sub_info_unlimited">Unlimited</string>
 
+    <string name="title_steamdl_group">SteamDL</string>
+    <string name="title_pref_steamdl_enabled">Enable SteamDL cache</string>
+    <string name="summary_pref_steamdl_enabled">Route supported game CDN downloads through the half-price SteamDL cache. Requires sniffing enabled.</string>
+    <string name="title_pref_steamdl_token">SteamDL token</string>
+    <string name="steamdl_status_loading">Fetching SteamDL config…</string>
+    <string name="steamdl_status_ok">%1$d domains loaded</string>
+    <string name="steamdl_status_error">Config error: %1$s</string>
+
 </resources>

@@ -21,9 +21,15 @@ import com.v2ray.ang.handler.AppLocaleManager
 import com.v2ray.ang.handler.MmkvManager
 import com.v2ray.ang.handler.NotificationManager
 import com.v2ray.ang.handler.SettingsManager
+import com.v2ray.ang.handler.SteamDlManager
 import com.v2ray.ang.root.RootLanSharing
 import com.v2ray.ang.util.LogUtil
 import com.v2ray.ang.util.Utils
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 import java.lang.ref.SoftReference
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -33,6 +39,9 @@ class CoreVpnService : VpnService(), ServiceControl {
     private var isRunning = false
     private var tun2SocksService: Tun2SocksControl? = null
     private val isStartingLock = AtomicBoolean(false)
+
+    /** Service-owned scope for SteamDL bridge startup; cancelled on stop/destroy. */
+    private var steamDlScope: CoroutineScope? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -70,6 +79,8 @@ class CoreVpnService : VpnService(), ServiceControl {
             }
         }
 
+        steamDlScope?.cancel()
+        steamDlScope = null
         unlockStart()
         NotificationManager.cancelNotification()
     }
@@ -106,6 +117,7 @@ class CoreVpnService : VpnService(), ServiceControl {
             LogUtil.e(AppConfig.TAG, "StartCore-VPN: Interface not initialized")
             return
         }
+        startSteamDlBridge()
         if (!CoreServiceManager.startCoreLoop(mInterface)) {
             LogUtil.e(AppConfig.TAG, "StartCore-VPN: Failed to start core loop")
             stopAllService()
@@ -325,6 +337,10 @@ class CoreVpnService : VpnService(), ServiceControl {
         unlockStart()
         isRunning = false
 
+        steamDlScope?.cancel()
+        steamDlScope = null
+        SteamDlBridge.stop()
+
         tun2SocksService?.stopTun2Socks()
         tun2SocksService = null
 
@@ -357,6 +373,29 @@ class CoreVpnService : VpnService(), ServiceControl {
             } catch (e: Exception) {
                 LogUtil.e(AppConfig.TAG, "StartCore-VPN: Failed to close interface", e)
             }
+        }
+    }
+
+    /**
+     * Starts the local SteamDL cache bridge before the core loop when the
+     * SteamDL mode is enabled. Disk/network work happens in the service-owned
+     * scope so lifecycle callbacks never block; Xray may win the race by a few
+     * ms and client retries cover a late bind.
+     */
+    private fun startSteamDlBridge() {
+        if (!MmkvManager.decodeSettingsBool(AppConfig.PREF_STEAMDL_ENABLED)) {
+            return
+        }
+        val scope = steamDlScope ?: CoroutineScope(SupervisorJob() + Dispatchers.IO).also {
+            steamDlScope = it
+        }
+        scope.launch {
+            val runtime = SteamDlManager.runtime(applicationContext)
+            if (runtime == null) {
+                LogUtil.w(AppConfig.TAG, "StartCore-VPN: SteamDL config missing, bridge not started")
+                return@launch
+            }
+            SteamDlBridge.start(runtime)
         }
     }
 

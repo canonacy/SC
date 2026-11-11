@@ -575,4 +575,12 @@
     <string name="sub_info_open_page">باز کردن صفحه اطلاعات اشتراک</string>
     <string name="sub_info_unlimited">نامحدود</string>
 
+    <string name="title_steamdl_group">SteamDL</string>
+    <string name="title_pref_steamdl_enabled">فعال‌سازی کش SteamDL</string>
+    <string name="summary_pref_steamdl_enabled">دانلود بازی‌های پشتیبانی‌شده از کش نیم‌بهای SteamDL عبور می‌کند. نیازمند فعال‌بودن Sniffing است.</string>
+    <string name="title_pref_steamdl_token">توکن SteamDL</string>
+    <string name="steamdl_status_loading">در حال دریافت کانفیگ SteamDL…</string>
+    <string name="steamdl_status_ok">%1$d دامنه بارگذاری شد</string>
+    <string name="steamdl_status_error">خطای کانفیگ: %1$s</string>
+
 </resources>

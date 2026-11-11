@@ -105,6 +105,9 @@ fun SettingsScreen(
     val scrollState = rememberScrollState()
     val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
     val systemVpnSettingsAvailable by viewModel.systemVpnSettingsAvailable.collectAsStateWithLifecycle()
+    val steamdlEnabled by viewModel.steamdlEnabled.collectAsStateWithLifecycle()
+    val steamdlToken by viewModel.steamdlToken.collectAsStateWithLifecycle()
+    val steamdlStatus by viewModel.steamdlStatus.collectAsStateWithLifecycle()
     var uiSettingsExpanded by rememberSaveable { mutableStateOf(true) }
     var vpnSettingsExpanded by rememberSaveable { mutableStateOf(true) }
     var coreSettingsExpanded by rememberSaveable { mutableStateOf(true) }
@@ -113,6 +116,7 @@ fun SettingsScreen(
     var observatorySettingsExpanded by rememberSaveable { mutableStateOf(false) }
     var advancedSettingsExpanded by rememberSaveable { mutableStateOf(true) }
     var modeSettingsExpanded by rememberSaveable { mutableStateOf(true) }
+    var steamdlExpanded by rememberSaveable { mutableStateOf(false) }
 
     var localDns by rememberMmkvBool(AppConfig.PREF_LOCAL_DNS_ENABLED, false)
     var fakeDns by rememberMmkvBool(AppConfig.PREF_FAKE_DNS_ENABLED, false)
@@ -188,6 +192,12 @@ fun SettingsScreen(
     val muxXudpConcurrencyInt = muxXudpConcurrency.toIntOrNull() ?: AppConfig.DEFAULT_MUX_XUDP_CONCURRENCY.toInt()
 
     val dynamicColorSupported = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+    LaunchedEffect(Unit) {
+        if (steamdlEnabled && steamdlStatus is SteamDlUiState.Idle) {
+            viewModel.refreshSteamDlConfig()
+        }
+    }
+
     LaunchedEffect(dynamicColorSupported) {
         if (!dynamicColorSupported && dynamicColor) {
             dynamicColor = false
@@ -501,6 +511,31 @@ fun SettingsScreen(
                     values = outboundResolveValues,
                     selectedValue = outboundResolveMethod,
                     onSelected = { outboundResolveMethod = it }
+                )
+            }
+
+            CollapsiblePreferenceGroupHeader(
+                title = stringResource(R.string.title_steamdl_group),
+                expanded = steamdlExpanded,
+                onExpandedChange = { steamdlExpanded = it }
+            )
+            if (steamdlExpanded) {
+                SettingsSwitchItem(
+                    title = stringResource(R.string.title_pref_steamdl_enabled),
+                    summary = when (val status = steamdlStatus) {
+                        is SteamDlUiState.Idle -> stringResource(R.string.summary_pref_steamdl_enabled)
+                        is SteamDlUiState.Loading -> stringResource(R.string.steamdl_status_loading)
+                        is SteamDlUiState.Success -> stringResource(R.string.steamdl_status_ok, status.domains)
+                        is SteamDlUiState.Error -> stringResource(R.string.steamdl_status_error, status.message)
+                    },
+                    checked = steamdlEnabled,
+                    onCheckedChange = { viewModel.onSteamdlEnabledChanged(it) }
+                )
+                SettingsEditItem(
+                    title = stringResource(R.string.title_pref_steamdl_token),
+                    value = steamdlToken,
+                    isPassword = true,
+                    onValueChanged = { viewModel.onSteamdlTokenChanged(it) }
                 )
             }
 

@@ -93,6 +93,13 @@ jobs:
         fileName: "android_keystore.jks"
         encodedString: ${{ secrets.APP_KEYSTORE_BASE64 }}
 
+    - name: Run unit tests
+      run: |
+        cd ${{ github.workspace }}/V2rayNG
+        echo "sdk.dir=${ANDROID_HOME}" > local.properties
+        chmod 755 gradlew
+        ./gradlew test --console=plain
+
     - name: Build APK
       run: |
         cd ${{ github.workspace }}/V2rayNG

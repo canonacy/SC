@@ -17,6 +17,8 @@ import com.v2ray.ang.enums.EConfigType
 import com.v2ray.ang.extension.isNotNullEmpty
 import com.v2ray.ang.handler.MmkvManager
 import com.v2ray.ang.handler.SettingsManager
+import com.v2ray.ang.handler.SteamDlManager
+import com.v2ray.ang.handler.SteamDlRules
 import com.v2ray.ang.util.HttpUtil
 import com.v2ray.ang.util.JsonUtil
 import com.v2ray.ang.util.LogUtil
@@ -208,6 +210,7 @@ object CoreConfigManager {
         configureDns(configContext, v2rayConfig, policyGroupBalancerTags)
         configureLocalDns(configContext, v2rayConfig)
         configureRootModeDns(v2rayConfig)
+        configureSteamDl(configContext, v2rayConfig)
 
         // (added by getDns / getCustomLocalDns) to use the balancer, then add
         // the catch-all balancer rule.
@@ -1256,6 +1259,45 @@ object CoreConfigManager {
         v2rayConfig.routing.rules.add(rule)
     }
 
+
+    /**
+     * SteamDL mode: route whitelisted game-CDN patterns to the local cache
+     * bridge. Rules are inserted at the front of the list so they win over
+     * user rulesets and the policy-group catch-all; DNS rules (port 53) never
+     * collide with the port 80/443 matchers.
+     */
+    private fun configureSteamDl(configContext: CoreConfigContext, v2rayConfig: V2rayConfig) {
+        if (!MmkvManager.decodeSettingsBool(AppConfig.PREF_STEAMDL_ENABLED)) {
+            return
+        }
+        val steamdlConfig = SteamDlManager.cachedOrNull()
+            ?: SteamDlManager.loadFromDiskBlocking(configContext.context)
+        if (steamdlConfig == null || steamdlConfig.domains.isEmpty()) {
+            LogUtil.w(AppConfig.TAG, "SteamDL enabled but config unavailable; skipping SteamDL rules")
+            return
+        }
+        val sniffingOn = MmkvManager.decodeSettingsBool(AppConfig.PREF_SNIFFING_ENABLED, true) != false
+                || MmkvManager.decodeSettingsBool(AppConfig.PREF_FAKE_DNS_ENABLED)
+        if (!sniffingOn) {
+            LogUtil.w(AppConfig.TAG, "SteamDL rules need sniffing enabled to match HTTP/TLS domains")
+        }
+        if (v2rayConfig.outbounds.none { it.tag == AppConfig.TAG_STEAMDL }) {
+            v2rayConfig.outbounds.add(
+                V2rayConfig.OutboundBean(
+                    tag = AppConfig.TAG_STEAMDL,
+                    protocol = "socks",
+                    settings = V2rayConfig.OutboundBean.OutSettingsBean().apply {
+                        address = AppConfig.LOOPBACK
+                        port = AppConfig.PORT_STEAMDL_BRIDGE
+                    },
+                )
+            )
+        }
+        v2rayConfig.routing.rules.addAll(
+            0,
+            SteamDlRules.buildRules(steamdlConfig.domains, AppConfig.TAG_STEAMDL, AppConfig.TAG_BLOCKED),
+        )
+    }
 
     /**
      * Build balancer and probe settings from one policy-group strategy value.
