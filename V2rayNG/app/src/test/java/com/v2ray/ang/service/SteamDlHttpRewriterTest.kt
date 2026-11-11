@@ -28,7 +28,7 @@ class SteamDlHttpRewriterTest {
         assertTrue(out.contains("Auth-Token: tok123\r\n"))
         assertTrue(out.contains("User-Agent: Launcher\r\n"))
         assertTrue(out.endsWith("\r\n\r\n"))
-        assertFalse(out.contains("Host: cdn.example.com"))
+        assertFalse(out.contains("\r\nHost: cdn.example.com"))
     }
 
     @Test
@@ -67,7 +67,7 @@ class SteamDlHttpRewriterTest {
         val out = asText(SteamDlHttpRewriter.rewrite(input, "dl.steamdl.ir", ""))
 
         assertEquals(1, Regex("Real-Host:").findAll(out).count())
-        assertEquals(1, Regex("Host:").findAll(out).count())
+        assertEquals(1, Regex("\r\nHost:").findAll(out).count())
     }
 
     @Test
